@@ -1,6 +1,6 @@
 name: Update neuvector dependency
 on:
-  workflow_call:
+  workflow_dispatch:
 jobs:
   update-neuvector-dependency:
     name: Update neuvector dependency
