@@ -19,4 +19,4 @@ jobs:
         env:
           UPDATECLI_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           UPDATECLI_GITHUB_OWNER: ${{ github.repository_owner }}
-        run: "updatecli compose apply --file .github/updatecli/updatecli-compose.bump-neuvector.yaml"
+        run: "updatecli compose apply --file updatecli/updatecli-compose.bump-neuvector.yaml"
