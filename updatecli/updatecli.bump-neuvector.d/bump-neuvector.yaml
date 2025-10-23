@@ -25,23 +25,10 @@ targets:
     scmid: scanner
     kind: shell
     spec:
-      command: go get github.com/neuvector/neuvector@main
-  tidyGoMod:
-    name: Tidy go modules
-    scmid: scanner
-    kind: shell
-    spec:
-      command: go mod tidy
-    dependson:
-      - updateDependency
-  vendorDeps:
-    name: Vendor dependencies
-    scmid: scanner
-    kind: shell
-    spec:
-      command: go mod vendor
-    dependson:
-      - tidyGoMod
+      command: |
+        go get github.com/neuvector/neuvector@main
+        go mod tidy
+        go mod vendor
 
 actions:
   default:
