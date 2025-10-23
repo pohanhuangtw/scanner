@@ -29,13 +29,20 @@ targets:
         go get github.com/neuvector/neuvector@main
         go mod tidy
         go mod vendor
+      changedif:
+        kind: file/checksum
+        spec:
+          files:
+            - go.mod
+            - go.sum
+            - vendor/modules.txt
 
 actions:
   default:
     kind: github/pullrequest
     scmid: scanner
     spec:
-      title: 'chore: update neuvector to main'
+      title: 'chore: update neuvector to main ({{ now | date "2006-01-02" }})'
       description: |
         This PR updates neuvector dependency to the latest main branch.
 
@@ -45,3 +52,4 @@ actions:
         - Ran go mod vendor
       labels:
         - dependencies
+      automerge: false
