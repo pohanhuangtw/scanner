@@ -8,7 +8,7 @@ require (
 	github.com/docker/docker v28.1.1+incompatible
 	github.com/google/uuid v1.6.0
 	github.com/jedib0t/go-pretty/v6 v6.6.7
-	github.com/neuvector/neuvector v0.0.0-20260320012300-7302eba12d27
+	github.com/neuvector/neuvector v0.0.0-20260320084237-3f398b52a2c6
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/quay/clair/v2 v2.1.8
 	github.com/sirupsen/logrus v1.9.3
