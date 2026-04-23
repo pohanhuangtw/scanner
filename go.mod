@@ -1,6 +1,6 @@
 module github.com/neuvector/scanner
 
-go 1.25.0
+go 1.26.2
 
 replace k8s.io/cri-api => k8s.io/cri-api v0.25.16
 
@@ -8,7 +8,7 @@ require (
 	github.com/docker/docker v28.1.1+incompatible
 	github.com/google/uuid v1.6.0
 	github.com/jedib0t/go-pretty/v6 v6.6.7
-	github.com/neuvector/neuvector v0.0.0-20260421175021-093159b1bcb8
+	github.com/neuvector/neuvector v0.0.0-20260422141817-57a7bdd85f81
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/quay/clair/v2 v2.1.8
 	github.com/sirupsen/logrus v1.9.3
