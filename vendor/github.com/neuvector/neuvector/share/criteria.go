@@ -28,12 +28,12 @@ const (
 	CriteriaKeyBaseImage                     string = "baseImage"
 	CriteriaKeyCVENames                      string = "cveNames"
 	CriteriaKeyCVECriticalCount              string = "cveCriticalCount"
-	CriteriaKeyCVEHighCount                  string = "cveHighCount"
-	CriteriaKeyCVEHighCountNoCritical        string = "cveHighCountNoCritical"
+	CriteriaKeyCVEHighCount                  string = "cveHighCount"           // count of high & critical CVEs (for backward compatibility)
+	CriteriaKeyCVEHighCountNoCritical        string = "cveHighCountNoCritical" // count of high CVEs only
 	CriteriaKeyCVEMediumCount                string = "cveMediumCount"
 	CriteriaKeyCVECriticalWithFixCount       string = "cveCriticalWithFixCount"
-	CriteriaKeyCVEHighWithFixCount           string = "cveHighWithFixCount"
-	CriteriaKeyCVEHighWithFixCountNoCritical string = "cveHighWithFixCountNoCritical"
+	CriteriaKeyCVEHighWithFixCount           string = "cveHighWithFixCount"           // count of "high with fix" & "critical with fix" CVEs (for backward compatibility)
+	CriteriaKeyCVEHighWithFixCountNoCritical string = "cveHighWithFixCountNoCritical" // count of "high with fix" CVEs only
 	CriteriaKeyCVEScore                      string = "cveScore"
 	CriteriaKeyCVEScoreCount                 string = "cveScoreCount"
 	CriteriaKeyImageScanned                  string = "imageScanned"
@@ -123,8 +123,8 @@ func IsSvcIpGroupMember(usergroup *CLUSGroup, svcipgroup *CLUSGroup) bool {
 
 func IsSvcIpGroupSelected(svcipgroup *CLUSGroup, selector []CLUSCriteriaEntry) bool {
 	var ret, positive bool
-	var rets map[string]bool = make(map[string]bool)
-	var poss map[string]bool = make(map[string]bool)
+	var rets = make(map[string]bool)
+	var poss = make(map[string]bool)
 	for _, crt := range selector {
 		key := crt.Key
 
@@ -185,8 +185,8 @@ func IsGroupMember(group *CLUSGroup, workload *CLUSWorkload, domain *CLUSDomain)
 // For different criteria type, apply 'and'
 func IsWorkloadSelected(workload *CLUSWorkload, selector []CLUSCriteriaEntry, domain *CLUSDomain) bool {
 	var ret, positive bool
-	var rets map[string]bool = make(map[string]bool)
-	var poss map[string]bool = make(map[string]bool)
+	var rets = make(map[string]bool)
+	var poss = make(map[string]bool)
 	for _, crt := range selector {
 		key := crt.Key
 		switch key {
@@ -252,9 +252,9 @@ func EqualMatch(match, value string) bool {
 		return match == value
 	}
 
-	re := strings.Replace(match, ".", "\\.", -1)
-	re = strings.Replace(re, "?", ".", -1)
-	re = strings.Replace(re, "*", ".*", -1)
+	re := strings.ReplaceAll(match, ".", "\\.")
+	re = strings.ReplaceAll(re, "?", ".")
+	re = strings.ReplaceAll(re, "*", ".*")
 	re = fmt.Sprintf("^%s$", re)
 
 	if regex, err := regexp.Compile(re); err != nil {

@@ -97,6 +97,7 @@ const QueryDuration string = "token_duration"
 const OPeq string = "eq"
 const OPneq string = "neq"
 const OPin string = "in"
+const OPnotin string = "notin"
 const OPgt string = "gt"
 const OPgte string = "gte"
 const OPlt string = "lt"
@@ -122,6 +123,10 @@ const UserRoleFedReader string = "fedReader"
 const LearnedGroupPrefix string = "nv."
 const LearnedSvcGroupPrefix string = "nv.ip."
 const FederalGroupPrefix string = "fed."
+const FedAllHostGroup string = "fed.nodes"
+const FedAllContainerGroup string = "fed.containers"
+const FedExternalGroup string = "fed.external"
+
 const LearnedExternal string = "external"
 const AllHostGroup string = "nodes"
 const AllContainerGroup string = "containers"
@@ -556,6 +561,10 @@ type RESTResponseRulesExport struct {
 	RemoteExportOptions *RESTRemoteExportOptions `json:"remote_export_options,omitempty"`
 }
 
+type RESTFedConfigExport struct {
+	RemoteExportOptions *RESTRemoteExportOptions `json:"remote_export_options,omitempty"`
+}
+
 type RESTWafSensorExport struct {
 	Names               []string                 `json:"names"`
 	RemoteExportOptions *RESTRemoteExportOptions `json:"remote_export_options,omitempty"`
@@ -621,9 +630,10 @@ type RESTUserConfig struct {
 }
 
 type RESTUsersData struct {
-	Users       []*RESTUser `json:"users"`
-	GlobalRoles []string    `json:"global_roles"`
-	DomainRoles []string    `json:"domain_roles"`
+	Users             []*RESTUser `json:"users"`
+	GlobalRoles       []string    `json:"global_roles"`
+	DomainRoles       []string    `json:"domain_roles"`
+	RolesNotForDomain []string    `json:"roles_not_for_domain"` // roles that do not work on domain level
 }
 
 type RESTUsersDataCfgMap struct {
@@ -939,6 +949,8 @@ type RESTWorkloadBrief struct { // obsolete, use v2 instead
 	HostID             string               `json:"host_id"`
 	Image              string               `json:"image"`
 	ImageID            string               `json:"image_id"`
+	ImageDigest        string               `json:"image_digest"`
+	ImageRepoDigests   []string             `json:"image_repo_digests"` // for docker runtime only
 	ImgCreateAt        string               `json:"image_created_at"`
 	ImgRegScand        bool                 `json:"image_reg_scanned"`
 	PlatformRole       string               `json:"platform_role"`
@@ -997,20 +1009,22 @@ type RESTWorkloadsData struct {
 }
 
 type RESTWorkloadBriefV2 struct {
-	ID           string `json:"id"`
-	Name         string `json:"name"`
-	DisplayName  string `json:"display_name"`
-	HostName     string `json:"host_name"`
-	HostID       string `json:"host_id"`
-	Image        string `json:"image"`
-	ImageID      string `json:"image_id"`
-	ImgCreateAt  string `json:"image_created_at"`
-	ImgRegScand  bool   `json:"image_reg_scanned"`
-	Domain       string `json:"domain"`
-	State        string `json:"state"`
-	Service      string `json:"service"`
-	Author       string `json:"author"`
-	ServiceGroup string `json:"service_group"`
+	ID               string   `json:"id"`
+	Name             string   `json:"name"`
+	DisplayName      string   `json:"display_name"`
+	HostName         string   `json:"host_name"`
+	HostID           string   `json:"host_id"`
+	Image            string   `json:"image"`
+	ImageID          string   `json:"image_id"`
+	ImageDigest      string   `json:"image_digest"`
+	ImageRepoDigests []string `json:"image_repo_digests"` // for docker runtime only
+	ImgCreateAt      string   `json:"image_created_at"`
+	ImgRegScand      bool     `json:"image_reg_scanned"`
+	Domain           string   `json:"domain"`
+	State            string   `json:"state"`
+	Service          string   `json:"service"`
+	Author           string   `json:"author"`
+	ServiceGroup     string   `json:"service_group"`
 }
 
 type RESTWorkloadSecurityV2 struct {
@@ -2351,6 +2365,7 @@ type RESTScanBrief struct {
 	BaseOS           string `json:"base_os"`
 	CVEDBVersion     string `json:"scanner_version"`
 	CVEDBCreateTime  string `json:"cvedb_create_time"`
+	OSScanStatus     string `json:"os_scan_status,omitempty"`
 }
 
 func (sb *RESTScanBrief) CVECount() int {
@@ -2519,13 +2534,65 @@ type RESTImageAsset struct {
 	ID          string `json:"id"`
 	DisplayName string `json:"display_name"`
 	PolicyMode  string `json:"policy_mode"`
+	Digest      string `json:"digest"`
 }
 
 type RESTScanReportData struct {
 	Report *RESTScanReport `json:"report"`
 }
 
+type RESTAssetsScanReportFilter struct {
+	Name  string   `json:"name"`
+	Op    string   `json:"op"`
+	Value []string `json:"value"`
+}
+
+type RESTVulScoreFilter struct {
+	ScoreVersion string  `json:"score_version"`
+	ScoreBottom  float32 `json:"score_bottom"`
+	ScoreTop     float32 `json:"score_top"`
+}
+
+type RESTScanReportCursor struct {
+	Name       string `json:"name"`
+	HostName   string `json:"host_name"`
+	Domain     string `json:"domain"`
+	CVEName    string `json:"cve_name"`
+	CVEPackage string `json:"cve_package"`
+}
+
+func (a *RESTScanReportCursor) String() string {
+	return a.HostName + "###" + a.Domain + "###" + a.Name + "###" + a.CVEName + "###" + a.CVEPackage
+}
+
+type RESTAssetsScanReportQuery struct {
+	ShowAccepted   bool                         `json:"show_accepted"`
+	MaxCveRecords  int                          `json:"max_cve_records"`    // one cve per-record
+	Cursor         RESTScanReportCursor         `json:"cursor"`             // last query stopped
+	ViewPod        *string                      `json:"view_pod,omitempty"` // for workloads only
+	VulScoreFilter *RESTVulScoreFilter          `json:"vul_score_filter,omitempty"`
+	SeverityFilter string                       `json:"severity_filter,omitempty"`
+	Filters        []RESTAssetsScanReportFilter `json:"filters,omitempty"`
+}
+
+type RESTAssetScanData struct {
+	HostName                 string   `json:"host_name"`
+	WorkloadName             string   `json:"workload_name"`
+	WorkloadDomain           string   `json:"workload_domain"`
+	WorkloadImage            string   `json:"workload_image"`
+	WorkloadImageID          string   `json:"workload_image_id"`
+	WorkloadImageDigest      string   `json:"workload_image_digest"`
+	WorkloadImageRepoDigests []string `json:"workload_image_repo_digests"` // for docker runtime env only
+	RESTVulnerability
+}
+
+type RESTAssetScanReportData struct {
+	Cursor   RESTScanReportCursor `json:"cursor"`
+	ScanData []*RESTAssetScanData `json:"scan_data"` // each cve for each asset has an entry
+}
+
 type RESTScanReport struct {
+	OSScanStatus  string                 `json:"os_scan_status,omitempty"`
 	Vuls          []*RESTVulnerability   `json:"vulnerabilities"`
 	Modules       []*RESTScanModule      `json:"modules,omitempty"`
 	Checks        []*RESTBenchItem       `json:"checks,omitempty"`
@@ -2593,14 +2660,15 @@ type RESTScanMeta struct {
 }
 
 type RESTScanRepoReq struct {
-	Metadata   RESTScanMeta `json:"metadata"`
-	Registry   string       `json:"registry"`
-	Username   string       `json:"username,omitempty"`
-	Password   string       `json:"password,omitempty"`
-	Repository string       `json:"repository"`
-	Tag        string       `json:"tag"`
-	ScanLayers bool         `json:"scan_layers"`
-	BaseImage  string       `json:"base_image"`
+	Metadata    RESTScanMeta `json:"metadata"`
+	Registry    string       `json:"registry"`
+	Username    string       `json:"username,omitempty"`
+	Password    string       `json:"password,omitempty"`
+	Repository  string       `json:"repository"`
+	Tag         string       `json:"tag"`
+	ScanLayers  bool         `json:"scan_layers"`
+	BaseImage   string       `json:"base_image"`
+	IgnoreProxy *bool        `json:"ignore_proxy,omitempty"`
 }
 
 type RESTScanRepoReqData struct {
@@ -3064,6 +3132,19 @@ type RESTProcessProfileConfig struct {
 
 type RESTProcessProfileConfigData struct {
 	Config *RESTProcessProfileConfig `json:"process_profile_config"`
+}
+
+type RESTCrdFedWebHook struct {
+	Name     string `json:"name"`
+	Url      string `json:"url"`
+	Enable   bool   `json:"enable"`
+	UseProxy bool   `json:"use_proxy"`
+	Type     string `json:"type"`
+}
+
+type RESTCrdFedConfig struct {
+	Name     string              `json:"name"`
+	Webhooks []RESTCrdFedWebHook `json:"webhooks"`
 }
 
 const MinDlpRuleID = 20000
@@ -3625,14 +3706,14 @@ type RESTAdmissionConfigData struct {
 }
 
 type RESTAdmRuleCriterion struct { // same type CLUSAdmRuleCriterion
-	Name        string                  `json:"name"`
-	Op          string                  `json:"op"`
-	Value       string                  `json:"value"`
-	SubCriteria []*RESTAdmRuleCriterion `json:"sub_criteria,omitempty"`
-	Type        string                  `json:"type,omitempty"`
-	Kind        string                  `json:"template_kind,omitempty"`
-	Path        string                  `json:"path,omitempty"`
-	ValueType   string                  `json:"value_type,omitempty"`
+	Name        string                  `json:"name" yaml:"name"`
+	Op          string                  `json:"op" yaml:"op"`
+	Value       string                  `json:"value" yaml:"value"`
+	SubCriteria []*RESTAdmRuleCriterion `json:"sub_criteria,omitempty" yaml:"sub_criteria,omitempty"`
+	Type        string                  `json:"type,omitempty" yaml:"type,omitempty"`
+	Kind        string                  `json:"template_kind,omitempty" yaml:"template_kind,omitempty"`
+	Path        string                  `json:"path,omitempty" yaml:"path,omitempty"`
+	ValueType   string                  `json:"value_type,omitempty" yaml:"value_type,omitempty"`
 }
 
 const (
@@ -3642,24 +3723,24 @@ const (
 )
 
 type RESTAdmissionRule struct { // see type CLUSAdmissionRule
-	ID         uint32                  `json:"id"`
-	Category   string                  `json:"category"`
-	Comment    string                  `json:"comment"`
-	Criteria   []*RESTAdmRuleCriterion `json:"criteria"`
-	Disable    bool                    `json:"disable"`
-	Critical   bool                    `json:"critical"`
-	CfgType    string                  `json:"cfg_type"`   // CfgTypeLearned / CfgTypeUserCreated / CfgTypeGround / CfgTypeFederal (see above)
-	RuleType   string                  `json:"rule_type"`  // ValidatingExceptRuleType / ValidatingDenyRuleType (see above)
-	RuleMode   string                  `json:"rule_mode"`  // "" / share.AdmCtrlModeMonitor / share.AdmCtrlModeProtect
-	Containers []string                `json:"containers"` // empty for all containers, "containers" / "init_containers" / "ephemeral_containers"
+	ID         uint32                  `json:"id" yaml:"id"`
+	Category   string                  `json:"category" yaml:"category"`
+	Comment    string                  `json:"comment" yaml:"comment"`
+	Criteria   []*RESTAdmRuleCriterion `json:"criteria" yaml:"criteria"`
+	Disable    bool                    `json:"disable" yaml:"disable"`
+	Critical   bool                    `json:"critical" yaml:"critical"`
+	CfgType    string                  `json:"cfg_type" yaml:"cfg_type"`     // CfgTypeLearned / CfgTypeUserCreated / CfgTypeGround / CfgTypeFederal (see above)
+	RuleType   string                  `json:"rule_type" yaml:"rule_type"`   // ValidatingExceptRuleType / ValidatingDenyRuleType (see above)
+	RuleMode   string                  `json:"rule_mode" yaml:"rule_mode"`   // "" / share.AdmCtrlModeMonitor / share.AdmCtrlModeProtect
+	Containers []string                `json:"containers" yaml:"containers"` // empty for all containers, "containers" / "init_containers" / "ephemeral_containers"
 }
 
 type RESTAdmissionRuleData struct {
-	Rule *RESTAdmissionRule `json:"rule"`
+	Rule *RESTAdmissionRule `json:"rule" yaml:"rule"`
 }
 
 type RESTAdmissionRulesData struct {
-	Rules []*RESTAdmissionRule `json:"rules"`
+	Rules []*RESTAdmissionRule `json:"rules" yaml:"rules"`
 }
 
 // Passed from manager to controller. Omit fields indicate that it's not modified.
@@ -4101,6 +4182,10 @@ type RESTRemoteExportOptions struct {
 	Comment                  string `json:"comment"`
 }
 
+type RESTRemoteExportData struct {
+	FilePath string `json:"file_path"`
+}
+
 func (config *RESTRemoteExportOptions) IsValid() bool {
 	return config.RemoteRepositoryNickname != ""
 }
@@ -4118,11 +4203,13 @@ type VulQueryFilterViewModel struct {
 
 	ServiceName   string `json:"serviceName"`
 	ImageName     string `json:"imageName"`
+	ImageBaseOS   string `json:"imageBaseOS"`
 	NodeName      string `json:"nodeName"`
 	ContainerName string `json:"containerName"`
 
 	ServiceNameMatchType   string `json:"matchTypeService"`
 	ImageNameMatchType     string `json:"matchTypeImage"`
+	ImageBaseOSMatchType   string `json:"matchTypeImageBaseOS"`
 	NodeNameMatchType      string `json:"matchTypeNode"`
 	ContainerNameMatchType string `json:"matchTypeContainer"`
 
@@ -4136,8 +4223,9 @@ type VulQueryFilterViewModel struct {
 	ViewType      string `json:"viewType"`
 
 	//specific for /v1/assetvul
-	LastModifiedTime int64  `json:"last_modified_timestamp"`
-	DebugCVEName     string `json:"debugcve"`
+	LastModifiedTime   int64  `json:"last_modified_timestamp"`
+	DebugCVEName       string `json:"debugcve"`
+	IncludeNoVulAssets bool   `json:"include_no_vul_assets"`
 }
 
 type AssetQueryFilterViewModel struct {
@@ -4170,12 +4258,13 @@ type QuerySessionRequest struct {
 }
 
 type RESTAssetView struct {
-	Workloads []*RESTWorkloadAssetView    `json:"workloads"`
-	Nodes     []*RESTHostAssetView        `json:"nodes"`
-	Platforms []*RESTPlatformAssetView    `json:"platforms"`
-	Images    []*RESTImageAssetView       `json:"images"`
-	Vuls      []*RESTVulnerabilityAssetV2 `json:"vulnerabilities"`
-	QueryStat *RESTVulQueryStats          `json:"summary"`
+	Workloads   []*RESTWorkloadAssetView    `json:"workloads"`
+	Nodes       []*RESTHostAssetView        `json:"nodes"`
+	Platforms   []*RESTPlatformAssetView    `json:"platforms"`
+	Images      []*RESTImageAssetView       `json:"images"`
+	NoVulImages []*RESTNoVulImageAsset      `json:"no_vul_images"`
+	Vuls        []*RESTVulnerabilityAssetV2 `json:"vulnerabilities"`
+	QueryStat   *RESTVulQueryStats          `json:"summary"`
 }
 
 type RESTWorkloadAssetView struct {
@@ -4186,6 +4275,7 @@ type RESTWorkloadAssetView struct {
 	Applications    []string `json:"applications"`
 	PolicyMode      string   `json:"policy_mode"`
 	ServiceGroup    string   `json:"service_group"`
+	Critical        int      `json:"critical"`
 	High            int      `json:"high"`
 	Medium          int      `json:"medium"`
 	Low             int      `json:"low"`
@@ -4202,6 +4292,7 @@ type RESTHostAssetView struct {
 	CPUs            int      `json:"cpus"`
 	Memory          int64    `json:"memory"`
 	Containers      int      `json:"containers"`
+	Critical        int      `json:"critical"`
 	High            int      `json:"high"`
 	Medium          int      `json:"medium"`
 	Low             int      `json:"low"`
@@ -4214,6 +4305,7 @@ type RESTPlatformAssetView struct {
 	Name            string   `json:"name"`
 	Version         string   `json:"version"`
 	BaseOS          string   `json:"base_os"`
+	Critical        int      `json:"critical"`
 	High            int      `json:"high"`
 	Medium          int      `json:"medium"`
 	Low             int      `json:"low"`
@@ -4223,26 +4315,41 @@ type RESTPlatformAssetView struct {
 type RESTImageAssetView struct {
 	ID              string   `json:"id"`
 	Name            string   `json:"name"`
+	Digest          string   `json:"digest"`
+	Critical        int      `json:"critical"`
 	High            int      `json:"high"`
 	Medium          int      `json:"medium"`
 	Low             int      `json:"low"`
 	Vulnerabilities []string `json:"vulnerabilities"`
+	CVEDBVersion    string   `json:"cvedb_version"`
+	CVEDBCreateTime string   `json:"cvedb_create_time"`
+}
+
+type RESTNoVulImageAsset struct {
+	ID              string `json:"id"`
+	Name            string `json:"name"`
+	Digest          string `json:"digest"`
+	CVEDBVersion    string `json:"cvedb_version"`
+	CVEDBCreateTime string `json:"cvedb_create_time"`
 }
 
 type RESTImageAssetViewV2 struct {
-	ID        string `json:"image_id"`
-	Name      string `json:"repository"`
-	Critical  int    `json:"critical,omitempty"`
-	High      int    `json:"high"`
-	Medium    int    `json:"medium"`
-	CreatedAt string `json:"created_at"`
-	ScannedAt string `json:"scanned_at"`
-	Digest    string `json:"digest"`
-	BaseOS    string `json:"base_os"`
-	RegName   string `json:"reg_name"`
-	Registry  string `json:"repo_url"`
-	Size      int    `json:"size"`
-	Tag       string `json:"tag"`
+	ID              string `json:"image_id"`
+	Name            string `json:"repository"`
+	Critical        int    `json:"critical,omitempty"`
+	High            int    `json:"high"`
+	Medium          int    `json:"medium"`
+	CreatedAt       string `json:"created_at"`
+	ScannedAt       string `json:"scanned_at"`
+	Digest          string `json:"digest"`
+	BaseOS          string `json:"base_os"`
+	OSScanStatus    string `json:"os_scan_status,omitempty"`
+	RegName         string `json:"reg_name"`
+	Registry        string `json:"repo_url"`
+	Size            int    `json:"size"`
+	Tag             string `json:"tag"`
+	CVEDBVersion    string `json:"cvedb_version"`
+	CVEDBCreateTime string `json:"cvedb_create_time"`
 }
 
 type RESTVulQueryStats struct {
@@ -4294,4 +4401,50 @@ type AssetCVECount struct {
 
 type RESTAssetIDList struct {
 	IDs []string `json:"ids"`
+}
+
+type AssetScanReportInterface interface {
+	GetID() string
+	GetCursor() RESTScanReportCursor
+	GetScanData() RESTAssetScanData
+}
+
+func (a *RESTWorkload) GetID() string {
+	return a.ID
+}
+
+func (a *RESTWorkload) GetCursor() RESTScanReportCursor {
+	return RESTScanReportCursor{
+		Name:     a.Name,
+		Domain:   a.Domain,
+		HostName: a.HostName,
+	}
+}
+
+func (a *RESTWorkload) GetScanData() RESTAssetScanData {
+	return RESTAssetScanData{
+		HostName:                 a.HostName,
+		WorkloadName:             a.Name,
+		WorkloadDomain:           a.Domain,
+		WorkloadImage:            a.Image,
+		WorkloadImageID:          a.ImageID,
+		WorkloadImageDigest:      a.ImageDigest,
+		WorkloadImageRepoDigests: a.ImageRepoDigests,
+	}
+}
+
+func (h *RESTHost) GetID() string {
+	return h.ID
+}
+
+func (h *RESTHost) GetCursor() RESTScanReportCursor {
+	return RESTScanReportCursor{
+		Name: h.Name,
+	}
+}
+
+func (h *RESTHost) GetScanData() RESTAssetScanData {
+	return RESTAssetScanData{
+		HostName: h.Name,
+	}
 }
