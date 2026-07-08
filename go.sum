@@ -240,6 +240,8 @@ github.com/neuvector/neuvector v0.0.0-20260703174522-8136f80c4a78 h1:8iNkQ0HPMHw
 github.com/neuvector/neuvector v0.0.0-20260703174522-8136f80c4a78/go.mod h1:DGaffOc4/QjpGWGf7mbspcCxhh5EWJXLV2Qhn3+uPgg=
 github.com/neuvector/neuvector v0.0.0-20260706141937-18f5dff01022 h1:DxUl6NYWy/i+7suTls9C/jyReqtoqpOdcdn1WuTCRLw=
 github.com/neuvector/neuvector v0.0.0-20260706141937-18f5dff01022/go.mod h1:DGaffOc4/QjpGWGf7mbspcCxhh5EWJXLV2Qhn3+uPgg=
+github.com/neuvector/neuvector v0.0.0-20260707212254-09b46dbf5a5e h1:vmz4HizCsvu9OOeFrGL5J9ZRbUNTkrLCnNU7FDasnKo=
+github.com/neuvector/neuvector v0.0.0-20260707212254-09b46dbf5a5e/go.mod h1:DGaffOc4/QjpGWGf7mbspcCxhh5EWJXLV2Qhn3+uPgg=
 github.com/onsi/ginkgo/v2 v2.21.0 h1:7rg/4f3rB88pb5obDgNZrNHrQ4e6WpjonchcpuBRnZM=
 github.com/onsi/ginkgo/v2 v2.21.0/go.mod h1:7Du3c42kxCUegi0IImZ1wUQzMBVecgIHjR1C+NkhLQo=
 github.com/onsi/gomega v1.35.1 h1:Cwbd75ZBPxFSuZ6T+rN/WCb/gOc6YgFBXLlZLhC7Ds4=
